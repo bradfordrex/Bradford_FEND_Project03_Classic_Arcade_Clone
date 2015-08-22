@@ -56,7 +56,12 @@ var Engine = (function(global) {
         /* Use the browser's requestAnimationFrame function to call this
          * function again as soon as the browser is able to draw another frame.
          */
+         // add if statement to check if player has any more lives. Stop the game if they do not.
+        if (gamePlay.playerLives > 0) {
         win.requestAnimationFrame(main);
+      } else {
+        win.cancelAnimationFrame(main);
+      }
     };
 
     /* This function does some initial setup that should only occur once,
@@ -138,6 +143,7 @@ var Engine = (function(global) {
 
 
       renderEntities();
+      gamePlay.renderLifeMeter();
     }
 
     /* This function is called by the render function and is called on each game

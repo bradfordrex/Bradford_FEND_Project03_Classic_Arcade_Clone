@@ -1,11 +1,16 @@
 // Enemies our player must avoid
-var Enemy = function(col , row) {
+var Enemy = function(col , row, speed) {
     // Variables applied to each of our instances go here,
     // we've provided one for you to get started
 
     // The image/sprite for our enemies, this uses
     // a helper we've provided to easily load images
     this.sprite = 'images/enemy-bug.png';
+
+    // set the enemy speed to the object
+    this.speed = speed;
+
+    // Give the enemy a starting posistion and Y value based on col and row
     if (col === 1) {
       this.x = -101;
       this.startPos = -101;
@@ -37,26 +42,29 @@ Enemy.prototype.update = function(dt) {
     // You should multiply any movement by the dt parameter
     // which will ensure the game runs at the same speed for
     // all computers
-    // Loop animation by restarting enemies to startPos
-    if (this.x < 505) {
-          this.x = this.x + 100 * dt;
+
+    // Loop enemy bugs by restarting enemies to startPos
+    // Requires less objects created per level
+    if (this.x < 1010 + this.startPos) {
+          this.x = this.x + this.speed * dt;
         } else {this.x = this.startPos};
+
     // Collision checking
     // check if the left point of the player character falls inside a bug
-   if (player.x + 25 >= this.x
-      && player.x + 25 <= this.x + 100
-      && player.y + 100 >= this.y + 100
-      && player.y + 100 <= this.y + 150
+   if (player.x + 18 >= this.x + 2
+      && player.x + 18 <= this.x + 98
+      && player.y + 95 >= this.y + 76
+      && player.y + 95 <= this.y + 144
     ){
-     player = playerClass();
+     gamePlay.loseLife();
    };
    // check if the right point of the player character falls inside a bug
-   if (player.x + 75 >= this.x
-      && player.x + 75 <= this.x + 100
-      && player.y + 100 >= this.y + 100
-      && player.y + 100 <= this.y + 150
+   if (player.x + 84 >= this.x + 2
+      && player.x + 84 <= this.x + 98
+      && player.y + 95 >= this.y + 76
+      && player.y + 95 <= this.y + 144
     ){
-     player = playerClass();
+     gamePlay.loseLife();
    };
 }
 
@@ -71,22 +79,23 @@ Enemy.prototype.render = function() {
 
 // player class - which creates the player object
 var playerClass = function () {
-    // here we create the actual player Object - called Player.prototype
+    // Create the actual player Object - called Player.prototype
   var obj = Object.create(playerClass.prototype);
-    // here we set the .loc key of the object to the value passed into the function / object of the location
+    // Set the image url and starting coordinates for the player character
   obj.sprite = 'images/char-boy.png';
   obj.x = 203;
   obj.y = 405;
-    // here we retur  the object to the outer scope
+    // return the object to the outer scope
   return obj;
 }
   // here we create the update method for the player class, which is attached to the object that is created by the class
   // the update could be reffered to as the Animate function as this is where the animation commands go.
   // also passing in the time delta to use for animation commands
 playerClass.prototype.update = function(dt) {
+    // once the player reaches the water, Reset, and perform action
       if (this.y === -10) {
-        ctx.fillRect(player.x,player.y, 25, 25);
-         player = playerClass();
+          gamePlay.levelVictory();
+          player = playerClass();
       }
 
 }
@@ -97,15 +106,18 @@ playerClass.prototype.render = function() {
 
   // here is the handle input method for the player class
 playerClass.prototype.handleInput = function(direction) {
+  // set the length of the character movement
     var stepY = 83;
     var stepX = 101;
-     console.log(this.x);
+
+  // Check each increment to make sure it fits inside game map
+  // Then update the posistion value of the character accordingly
     if (direction === 'up') {
-          if (this.y-stepY >= -15) {
+          if (this.y-stepY >= -20) {
             this.y = this.y-stepY;
     }
     } else if (direction === 'down') {
-          if (this.y+stepY <= 415) {
+          if (this.y+stepY <= 435) {
             this.y = this.y+stepY;
     }
     } else if (direction === 'left') {
@@ -118,21 +130,88 @@ playerClass.prototype.handleInput = function(direction) {
     }
     }
 }
+var player = [];
+var allEnemies = [];
+var gamePlay = {
+  'playerLives': 3,
+  'gameLevel' : 1,
+  'renderLifeMeter' : function(){
+    // draw little guys depending on number of lives
+    // x position of key life
+    var meterX = 450;
+    var meterY = 505;
+    ctx.font = "24px Courier";
+    // ctx.fillText("Lives:", meterX - gamePlay.playerLives * 55, 575);
+    ctx.fillText("Lives:", 275, 575);
+    for (i = 0; i < gamePlay.playerLives; i++ ){
+      ctx.drawImage(Resources.get(player.sprite), meterX - i*45, meterY, 51, 86);
+    }
+  },
+  'loseLife' : function (){
+    gamePlay.playerLives = gamePlay.playerLives - 1;
+    if (gamePlay.playerLives > 0) {
+      // reset player character
+      player = playerClass();
+    } else {
+      gamePlay.gameOver();
+    }
+    return gamePlay.playerLives;
+  },
+  'gameOver' : function () {
+    player = playerClass();
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 5;
+    ctx.font = "64px Impact";
+    ctx.textAlign = "center";
+    ctx.strokeText("Game Over", 250, 250);
+    ctx.fillText("Game Over", 250, 250);
+    window.requestAnimationFrame(gamePlay.gameOver);
+  },
+  'levelVictory' : function() {
+    gamePlay.gameLevel++;
+    // victory animation functioin would go here
+    gamePlay.levels();
+  },
+  'levels' : function() {
+    if (gamePlay.gameLevel === 1){
+      // set player character to starting position
+      player = playerClass();
+      // Add our enemy bugs. With a column, row, and speed
+      var enemies = {
+        'bug01' : new Enemy(1, 1, 100),
+        'bug02' : new Enemy(2, 2, 100),
+        'bug03' : new Enemy(3, 3, 100),
+        'bug04' : new Enemy(3, 1, 100)
+      }
+      // push all enemy objects into allEnemies array
+      for (bug in enemies){
+        allEnemies.push(enemies[bug]);
+      }
+    } else if (gamePlay.gameLevel === 2){
+      // clear the previous level from the allEnemies Array
+      allEnemies.splice(0,allEnemies.length)
+      // reset player character to starting posistion
+      player = playerClass();
+      // add enemies and push into allEnemies array
+      var enemies = {
+        'bug01' : new Enemy(1, 1, 300),
+        'bug02' : new Enemy(1, 2, 100),
+        'bug03' : new Enemy(3, 3, 200),
+        'bug04' : new Enemy(2, 1, 300)
+      }
+      for (bug in enemies){
+        allEnemies.push(enemies[bug]);
+      }
+    }
+  }
+}
+
 
 // Now instantiate your objects.
 // Place all enemy objects in an array called allEnemies
 // Place the player object in a variable called player
-var player = playerClass();
-var bug01 = new Enemy(1, 1);
-var bug02 = new Enemy(2, 2);
-var bug03 = new Enemy(3, 3);
 
-var allEnemies = [
-  bug01,
-  bug02,
-  bug03
-];
-
+gamePlay.levels();
 
 // This listens for key presses and sends the keys to your
 // Player.handleInput() method. You don't need to modify this.
