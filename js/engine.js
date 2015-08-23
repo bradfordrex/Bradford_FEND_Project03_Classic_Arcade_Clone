@@ -139,6 +139,7 @@ var Engine = (function(global) {
 
       renderEntities();
       gameMaster.render();
+      gamePlayInstructions();
     }
 
     /* This function is called by the render function and is called on each game

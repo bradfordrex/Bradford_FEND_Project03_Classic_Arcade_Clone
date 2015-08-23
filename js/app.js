@@ -314,6 +314,26 @@ var gameMaster = {
   'gemCount' : 0,
   // Array to track if the goal squares have been captured
   'goalSquares' : [false, false, false, false, false],
+  'instructions' : 'visable',
+  'systemControl' : function(keyCode) {
+    //When the game is over, player has option to play again by pressing enter
+      if (gameMaster.playerLives === 0) {
+        if (keyCode == 'enter') {
+          gameMaster.gameLevel = 1;
+          gameMaster.playerLives = 3;
+          gameMaster.goalSquares = [false, false, false, false, false];
+          gameMaster.levels();
+        }
+      }
+      if (keyCode === 'spacebar') {
+        if (gameMaster.instructions === 'visable') {
+          gameMaster.instructions = 'hidden';
+        } else {
+          gameMaster.instructions = 'visable';
+        }
+      }
+
+  },
   // Holds all game master elements to be rendered to the canvas
   'render' : function(){
 
@@ -370,6 +390,11 @@ var gameMaster = {
     ctx.textAlign = "center";
     ctx.strokeText("Game Over", 250, 250);
     ctx.fillText("Game Over", 250, 250);
+    ctx.restore();
+
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.fillText("Press Enter to Play Again", 250, 425);
     ctx.restore();
     };
 
@@ -473,6 +498,8 @@ var gameMaster = {
     if (gameMaster.gameLevel === 1){
       // set player character to starting position
       player = Character();
+      // clear the previous level from the allEnemies Array
+      allEnemies.splice(0,allEnemies.length)
       // add any obstacle rocks
       rocks = [];
       // add any Gems
@@ -852,4 +879,5 @@ document.addEventListener('keyup', function(e) {
     };
 
     player.handleInput(allowedKeys[e.keyCode]);
+    gameMaster.systemControl(allowedKeys[e.keyCode]);
 });
