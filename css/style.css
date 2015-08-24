@@ -1,3 +1,5 @@
 body {
     text-align: center;
+    background-image: url("../images/Spring_Grass.jpg");
+    background-size: cover;
 }

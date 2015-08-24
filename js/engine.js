@@ -45,7 +45,7 @@ var Engine = (function(global) {
          * our update function since it may be used for smooth animation.
          */
         update(dt);
-        render();
+        render(dt);
 
         /* Set our lastTime variable which is used to determine the time delta
          * for the next time this function is called.
@@ -103,7 +103,7 @@ var Engine = (function(global) {
      * they are flipbooks creating the illusion of animation but in reality
      * they are just drawing the entire screen over and over.
      */
-    function render() {
+    function render(dt) {
         /* This array holds the relative URL to the image used
          * for that particular row of the game level.
          */
@@ -138,8 +138,8 @@ var Engine = (function(global) {
 
 
       renderEntities();
-      gameMaster.render();
-      gamePlayInstructions();
+      gameMaster.render(dt);
+      gamePlayInstructions(dt);
     }
 
     /* This function is called by the render function and is called on each game
@@ -186,5 +186,28 @@ var Engine = (function(global) {
      * from within their app.js files.
      */
     global.ctx = ctx;
-    return {'render':render};
 })(this);
+
+
+var animate = {
+    'move' : function(property, startPos, endPos, duration, dt, repeat) {
+        var currentPos = property;
+        var distance = endPos - startPos; // find the total change of the animation
+        var rate = distance / duration; // gives us a pixels per second, or value change per second
+        var frameStep = rate * dt;
+        // Once the currentPos reaches the ending Pos - reset to startPos
+        if (repeat === 'repeat') {
+            if (endPos > startPos) {
+                if (currentPos > endPos) {
+                    currentPos = startPos;
+                }
+            } else if (endPos < startPos) {
+                if (currentPos < endPos) {
+                    currentPos = startPos;
+                }
+            }
+        };
+
+        return currentPos + frameStep;
+        },
+    };
