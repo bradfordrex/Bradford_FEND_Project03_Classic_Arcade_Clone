@@ -1,266 +1,316 @@
-// Class constructs the Enemies our player must avoid
+/* app.js
+ *
+ * Created by: Bradford Hill
+ * Created on: 8/24/2015
+ *
+ * This file contains all code that initializes and updates
+ * all objects used in the "Frogger" classic arcade game clone.
+ * This game has enemy bugs, rock road blocks, and gems that must be collected.
+ * It has one player with 3 lives and 10 levels that require the player to
+ * capture all 5 of the water blocks to advance the next level.
+ *
+ * It declares and defines contructor Classes to create enemy bugs, stones,
+ * and gem objects. It then draws the entities to the game board.
+ *
+ * It creates the player object, draws it on the canvas, and then listens for
+ * and handles User input. It updates the player object based on user input.
+ *
+ * It then declares a Game Master object that contains all the functions
+ * that control the rules of game play. Player lives, game level, etc. It then
+ * updates and monitors game play to control the rules of the game. Keeps track
+ * of which water squares have been captured, how many lives remain, and user
+ * input to control "insturctions" and "game over" game messages.
+ *
+*/
+
+/*
+ * Enemy Class constructor
+ * Creates the enemy objects and declares the variables needed for each bug.
+ *
+ * It takes in a Column, Row, Direction, and Seconds parameter. The seconds
+ * refers to how many seconds it takes for the bug to cross the entire game
+ * canvas. So more seconds means it moves slower.
+ *
+ * It sets the bugs starting posistion based on its direction. Right or left
+ * side of the canvas. And sets the Y posistion value based on which row of
+ * paved blocks on the game canvas. Row 1 is the top row, and row 3 is the
+ * bottom row of paved blocks.
+ *
+ * It sets an animation delay based on the column parameter. This delay
+ * animates the bugs into "columns" of bugs, one after the other. Column 1
+ * goes first, column 2 follows right behind it, etc. Up to 5 columns, which
+ * would create a constant line of bugs with no holes for the character to
+ * pass through.
+ *
+ * It creates a delay counter variable that lives outside the update and render
+ * methods, so that it will not be constantly reset.
+ *
+ * It then sets the URL of the bug image to a sprite variable. It also sets
+ * the function to be run when a collision occurs. It calls a function on
+ * collision, so that subclasses can change and add operations to the collision.
+*/
+
 var Enemy = function(col, row, dir, seconds) {
     'use strict';
-    // Variables applied to each of our instances go here,
-    // we've provided one for you to get started
-
-    // The image/sprite for our enemies, this uses
-    // a helper we've provided to easily load images
     this.sprite = 'images/enemy-bug.png';
-
-    // Declare counting variables outside of the update and render scope
-    // to count time in order to delay the bugs starting time
     this.delaycounter = 0;
-    // map the seconds passed in when the bug is instantiated; represents
-    // number of seconds it takes for the bug to get across the game board
     this.seconds = seconds;
-    // set the bug's delay time based on the column passed in.
-    // This creates the animation of one bug following another.
-    if (col === 1) {
+    this.onCollision = function() {  // Sets the operation to call on collision
+        gameMaster.loseLife();
+    };
+
+    if (col === 1) {                  // first bug to cross canvas
         this.delay = 0;
     }
-    else if (col === 2) {
+    else if (col === 2) {             // second bug
         this.delay = 0.2 * seconds;
     }
-    else if (col === 3) {
+    else if (col === 3) {             // third bug
         this.delay = 0.4 * seconds;
     }
-    else if (col === 4) {
+    else if (col === 4) {             // fourth bug
         this.delay = 0.6 * seconds;
     }
-    else {
+    else {                            // fifth bug
         this.delay = 0.8 * seconds;
     }
-    // set the Y position of the bugs based on the row passed in. Top row is 1.
+
     if (row === 1) {
-        this.y = 60;
+        this.y = 60;                  // Top row
     }
     else if (row === 2) {
-        this.y = 143;
+        this.y = 143;                 // Middle row
     }
     else {
-        this.y = 226;
+        this.y = 226;                 // Bottom row
     }
-    // Based on direction
-    // Set the enemies current x position, as well as a starting posistion variable to reset to.
-    if (dir === 'right'){
+
+    if (dir === 'right'){             // Start on the Left of canvas
         this.x = -110;
         this.startPos = -110;
         this.endPos = 515;
     }
-    else if (dir === 'left'){
+    else if (dir === 'left'){         // Start on the Right of canvas
         this.x = 505;
         this.startPos = 515;
         this.endPos = -110;
     }
 };
 
-// Update the enemy's position, required method for game
-// Parameter: dt, a time delta between ticks
+/*
+ * Enemy Update Method - this code controls how the bugs are updated on
+ * every frame of the animation / game.
+ *
+ * It calls the animate() function to move the bugs across the canvas, and it
+ * has the collision detection algorithm for each bug. When the bug and the
+ * character collide, it calls the loseLife() function.
+ *
+*/
+
 Enemy.prototype.update = function(dt) {
     'use strict';
-    // You should multiply any movement by the dt paramseter
-    // which will ensure the game runs at the same speed for all computers
-    // Begin the delay counter by incrementing the variable by the time delta
-    this.delaycounter += dt;
-
-    // Once the delay counter reaches the delay time, begin animation
-    if (this.delaycounter > this.delay) {
-        this.x = animate.move(this.x, this.startPos, this.endPos, this.seconds, dt, 'repeat');
+    this.delaycounter += dt;            // start the delay timer
+    if (this.delaycounter > this.delay) {     // after delay, begin animation
+        this.x = animate.move(
+            this.x,
+            this.startPos,
+            this.endPos,
+            this.seconds,
+            dt,
+            'repeat');
     }
 
-    // Collision checking
-    // Must checks both sides of the character for touching
-    // because character can move into bugs both ways
-    // Check if the left point of the player character falls inside a bug
-    // Does the point (25,95) on the character image fall inside the bug image
-    // from (2,76) to (98,144)
-    if (
+    /*
+     * COLLISION CHECKING
+     * Checks if either the left side or the right side of the character image
+     * fall inside the Bug image. Must check both sides, because the character
+     * can move into the bugs from either side.
+     * Does the left point (25,95) or right point (75,95) of the character
+     * image fall inside the bug image range (2,76) - (98,144)
+     */
+    if (                                // Check Left side of Character
         player.x + 25 >= this.x + 2
         && player.x + 25 <= this.x + 98
         && player.y + 95 >= this.y + 76
         && player.y + 95 <= this.y + 144
     ){
-    // if they are touching, player loses a life
-        gameMaster.loseLife();
-    }
-   // check right point of the player character, point (75,95) on the character image
-   if (
+        this.onCollision();             // if touching, call collision funcion
+      }
+
+    if (                                // Check Right side of Character
         player.x + 75 >= this.x + 2
         && player.x + 75 <= this.x + 98
         && player.y + 95 >= this.y + 76
         && player.y + 95 <= this.y + 144
     ){
-        gameMaster.loseLife();
+        this.onCollision();             // if touching, call collision funcion
    }
 };
 
-// Draw the enemy on the screen, required method for game
+/*
+ * Enemy Render Method
+ * Draw the enemy bug image to the canvas. Taking in the URL, X, and Y
+ * from the Enemy variables set forth in the Class constructor.
+ */
+
 Enemy.prototype.render = function() {
     'use strict';
     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
 };
 
-// Add stone obstacles to the game map
-var Stone = function (col, row) {
+/*
+ * Rock Road Block Constructor Sub-Class of Enemy
+ * Creates the rock objects, and assigns their x and y coordinates based on
+ * the Column and Row parameters passed in.
+ *
+ * Columns are based on the paved block grid of the game canvas.
+ * Column 1 is the first square on the left, Column 5 is the last square on the
+ * right. Row 1 is the top, Row 3 is the bottom.
+ *
+ * It re-uses the update and render methods of the Enemy Super Class
+ */
+var Stone = function(col, row){
     'use strict';
-    // Set the rock image for all stones
-    // and function to call when player collides with stones
+    Enemy.call(this, col, row);         // copy in properties of Enemy class
     this.sprite = 'images/Rock.png';
-    this.onCollision = 'roadBlock';
-    // Set the position of each rock based on the column and row input
-    if (col === 1) {
+    this.onCollision = function() {     // set unique collisio function.
+        gameMaster.roadBlock();
+    };
+    if (col === 1) {            // First column on far left
         this.x = 1;
     }
-    else if (col === 2) {
+    else if (col === 2) {       // second column
         this.x = 102;
     }
-    else if (col === 3) {
+    else if (col === 3) {       // third column
         this.x = 203;
     }
-    else if (col === 4) {
+    else if (col === 4) {       // fourth column
         this.x = 304;
     }
-    else {
+    else {                      // fifth column on far right
         this.x = 405;
     }
-    // Set the Y value based on the row
-    if (row === 1) {
-        this.y = 60;
-    }
-    else if (row === 2) {
-        this.y = 143;
-    }
-    else {
-        this.y = 226;
-    }
+    console.log(this.x);
+};
+Stone.prototype = Object.create(Enemy.prototype); // Copy Enemy methods
+Stone.prototype.constructor = Stone;             // Set constructor to Subclass
+Stone.prototype.update = function() {       // Override the Enemy update method
+    Enemy.prototype.update.call(this);    // copy properties of Enemy update
+    this.x = this.x;                    // Takes away the animation on this.x
 };
 
-// Update method for the rocks
-Stone.prototype.update = function() {
-    'use strict';
-    // Collision checking
-    // Check if center point of the character image falls inside a rock
-    // Does the point (50,95) on character image fall inside the rock (2,76) and (98,144)
-    if (
-        player.x + 50 >= this.x + 2
-        && player.x + 50 <= this.x + 98
-        && player.y + 95 >= this.y + 76
-        && player.y + 95 <= this.y + 144
-    ){
-    // set visability to false. This does nothing on the stones, but when
-    // this method becomes a subclass for the gems, it toggles their visabiltiy
-        this.vis = false;
-        gameMaster[this.onCollision]();
-    }
-};
-// Draw the rock image to the canvas
-Stone.prototype.render = function() {
-    'use strict';
-    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
-};
+/*
+ * Jewel constructor Sub Class and Methods
+ * Creats a subclass of Stone. Then Reuses posistioning of the Stone class
+ * based on column and row parameters.
+ * Then sets unique image URL, and collision function.
+ *
+ * Delcares a vis variable to toggle the visablility of the gem when "collected"
+ *
+ * It then overrides the Update and Render methods to only update and draw
+ * when the gem is visable.
+ */
 
-// Jewel creation
-// Subclass of Stone, reuse the positioning code
 var Jewel = function (col, row) {
     'use strict';
-    Stone.call(this, col, row);
-    //setting the unique Gem image for this subclass
+    Stone.call(this, col, row);           // copy properties of Stone Subclass
     this.sprite = 'images/Gem Blue.png';
-    // setting the collision function
-    this.onCollision = 'collectGem';
-    // Set visability status in variable outside of update and render
-    this.vis = true;
-    // Update the gameMaster gemCount so it knows
-    // how many gems are in play during this level
-    gameMaster.gemCount += 1;
-};
-// Create new object and assign it to Jewel.prototype so it will delegate
-// failed lookups to Stone.prototype
-Jewel.prototype = Object.create(Stone.prototype);
+    this.vis = true;                      // create visability toggle variable
+    this.onCollision = function() {     // Sets unique collision function
+        if (this.vis === true){       // only runs CollectGem when visable
+          gameMaster.collectGem();    // to keep from running more than once
+        }
+        this.vis = false;               // on collision; toggles visability off
 
-// Set the constructor new the Subclass to Jewel
-Jewel.prototype.constructor = Jewel;
-Jewel.prototype.update = function () {
-    'use strict';
-    // Reuse the collision detection from Stone
-    // if statement ensures it only runs collectGem() once
-    if (this.vis === true){
-        Stone.prototype.update.call(this);
-    }
+    };
+    gameMaster.gemCount += 1;   // adds 1 to gemCount tracking total of number
+                                // of gems per level
 };
-
-// Draw the gem image onto the game canvas
-// scale it down to fit inside game squares
-Jewel.prototype.render = function () {
+Jewel.prototype = Object.create(Stone.prototype);  // copy Stone methods
+Jewel.prototype.constructor = Jewel;    // set constructor to Jewel Subclass
+Jewel.prototype.render = function () { // over ride render function
     'use strict';
-    if (this.vis === true) {
+    if (this.vis === true) {        // if Gem is visable, draw it to the canvas
     ctx.drawImage(Resources.get(this.sprite), this.x+12, this.y+38, 75, 115);
-    }
+  }                             // Gem image must be scaled down to fit squares
 };
 
-// Now write your own player class
-// This class requires an update(), render() and
-// a handleInput() method.
+/*
+ * Player Character constructor Class
+ * This class does not accept any parameters. It sets the characters default
+ * posistion on the game map, as well as its image URL.
+ *
+ * Then creates Update, Render, and Input handling methods.
+ */
+
 var Character = function () {
     'use strict';
-    // Create the Character object
-    var obj = Object.create(Character.prototype);
-    // Set the image url and starting coordinates for the player character
-    obj.sprite = 'images/char-boy.png';
-    obj.x = 203;
-    obj.y = 405;
-    // return the object to the outer scope
-    return obj;
+    this.sprite = 'images/char-boy.png';
+    this.x = 203;
+    this.y = 405;
 };
 
-// Create the update method for the Character class
-// This handles collision checking of the character with the water
+/*
+ * Character update method
+ * Posistion checking determines when the character reaches the water.
+ * Then calls the levelScore function to track which water squares have been
+ * captured.
+ */
 Character.prototype.update = function(dt) {
     'use strict';
-    // Check if the player reaches the water.
-    // Once it does, call levelScore
-    if (this.y === -10) {
+    if (this.y === -10) {          // Checks Y posistion to see if in Water row
         gameMaster.levelScore(this.x);
     }
 };
 
-// Draw the character image to the game canvas
+/*
+ * Character render method - Draws the player character to the game map
+ */
 Character.prototype.render = function() {
     'use strict';
     ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
 };
 
-// Method for handling user input
+/*
+ * User input Method
+ * This fuction handles the character movement based on User Input
+ * It accepts a key stroke parameter from the event listener and then
+ * modifies the character x or y posistion value based on which key was pressed.
+ *
+ * It updates a user movment buffer to keep track of the last move; used by
+ * the roadBlock function.
+ *
+ * If statements check to see if the game is over or if the game has been won
+ * then disables user control when those system messages are activated. So
+ * user can not move the character when "Game Over" is on screen. It also
+ * checks every movement to see if it fits on the game map, and does not allow
+ * the move if it goes off canvas.
+ */
 Character.prototype.handleInput = function(direction) {
     'use strict';
-    // Sets the length of the character movement in pixels
-    var stepY = 83;
-    var stepX = 101;
-    // Keep running buffer of players last move, in order
-    // to reverse it when hitting a rock
-    gameMaster.lastMove = direction;
-    // Check each increment to make sure it fits inside game map
-    // Then update the posistion value of the character accordingly
-    // If statement disables user control of character if game is won or lost
+    var stepY = 83;               // sets the movement height of the character.
+    var stepX = 101;              // sets the movement lenght of the character.
+    gameMaster.lastMove = direction;           // updates movement buffer
+
     if (gameMaster.gameLevel <= 10 && gameMaster.playerLives > 0) {
     if (direction === 'up') {
-        if (this.y-stepY >= -20) {
+        if (this.y-stepY >= -20) {          // check if move stays on map
           this.y -= stepY;
         }
       }
     else if (direction === 'down') {
-        if (this.y+stepY <= 435) {
+        if (this.y+stepY <= 435) {          // check if move stays on map
           this.y += stepY;
         }
       }
     else if (direction === 'left') {
-        if (this.x-stepX > 0) {
+        if (this.x-stepX > 0) {             // check if move stays on map
           this.x -= stepX;
         }
       }
     else if (direction === 'right') {
-        if (this.x+stepX < 505) {
+        if (this.x+stepX < 505) {           // check if move stays on map
           this.x += stepX;
         }
       }
@@ -271,39 +321,45 @@ Character.prototype.handleInput = function(direction) {
 var player = [];
 var allEnemies = [];
 
-// Game Master object to hold all variables and functions
-// needed by the game to monitor game play and render game statistics
+/*
+ * GAME MASTER object
+ * This object holds all functions that control game play. It holds variables
+ * that track the current number of player lives, which level is loaded and
+ * active, as well as how many gems are on the board, instruction visability,
+ * captured goal squares, and users last move.
+ *
+ */
+
 var gameMaster = {
-    // Total lives allowed by game. Loeing life reduces this initial count
-    playerLives: 3,
-    // Initial Game Level is 1; winning increments this to the next level
-    gameLevel : 1,
-    // Holds the last move from the player input
-    lastMove : '',
-    // Total count of Gems on the canvas for current level
-    gemCount : 0,
-    // Array to track if the goal squares have been captured
-    goalSquares : [false, false, false, false, false],
-    // variable to toggle instructions visability
-    instructions : 'visable',
-    // variable to hold a timer count outside of the game master render function
-    // so it won't constantly be reset
-    titleTimer : 0,
-    // handle user input to control game Master messages
+    playerLives: 3,       // current player lives. Starts at 3.
+    gameLevel : 1,        // current game level, starts at 1
+    lastMove : '',        // holds User's last move
+    gemCount : 0,     // # of gems on board not collected. Must be 0 to advance
+    goalSquares : [ false,  // Tracks what water squares have been captured
+                    false,  // starts at false, or no squares captured.
+                    false,
+                    false,
+                    false],
+    instructions : 'visable',   // instructions visability
+    titleTimer : 0,       // Timer variable to time visability of "Level" Title
+    /*
+     * System Control input handling - accepts the key value of user input from
+     * the even listener. Only accpets Spacebar and Enter. Controls spacebar's
+     * command of instructions visability. And only allows Enter to work when
+     * "Game Over" is displayed.
+     */
     systemControl : function(keyCode) {
         'use strict';
-        //When the game is over, player has option to play again by pressing enter
-        // When they do, resets lives, goal squares, and game levels;
-        if (gameMaster.playerLives === 0) {
-            if (keyCode == 'enter') {
-                gameMaster.gameLevel = 1;
+        if (gameMaster.playerLives === 0) { // When game is over, accepts Enter
+            if (keyCode == 'enter') {       // Key, and then resets the game
+                gameMaster.gameLevel = 1;   // when pressed
                 gameMaster.playerLives = 3;
                 gameMaster.goalSquares = [false, false, false, false, false];
                 gameMaster.levels();
             }
         }
-        // Spacebar toggles instructions overlay at any time
-        if (keyCode === 'spacebar') {
+
+        if (keyCode === 'spacebar') { // Spacebar toggles instruction visability
             if (gameMaster.instructions === 'visable') {
                 gameMaster.instructions = 'hidden';
             } else {
@@ -311,20 +367,74 @@ var gameMaster = {
             }
         }
     },
-    // Holds all game master elements to be rendered to the canvas
+    /*
+     * Game Master Render function. - Holds all code to render images and text
+     * to the game canvas.
+     */
     render : function(dt){
         'use strict';
+        if (gameMaster.instructions === 'visable') {
+            // Draw rectangle box to hold instructions
+            ctx.save();                   // ctx.save to create unique settings
+            ctx.globalAlpha = 0.9;        // set opacity to 90%
+            ctx.fillStyle = "lightblue";
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 5;
+            ctx.fillRect(27, 75, 450, 450);
+            ctx.strokeRect(27, 75, 450, 450);
+            ctx.restore();        // restore canvas setting to before ctx.save
+
+            // Draw the main title "How to Play"
+            ctx.save();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 5;
+            ctx.font = "64px Impact";
+            ctx.textAlign = "center";
+            ctx.strokeText("How To Play", 250, 140);
+            ctx.fillText("How To Play", 250, 140);
+            ctx.restore();
+
+            // Draw detailed instructions on how to play the game
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.font = "18px arial";
+            ctx.fillText("Move your character around the game", 250, 175);
+            ctx.fillText("board using the arrow keys on your keyboard.", 250, 200);
+            ctx.fillText("The object is to get your character to the water", 250, 240);
+            ctx.fillText("without being hit by a bug!", 250, 265);
+            ctx.fillText("You must capture all of the water squares", 250, 305);
+            ctx.fillText("to advance to the next level.", 250, 330);
+            ctx.fillText("Beware of Rocks, that will block your path!", 250, 370);
+            ctx.fillText("When you see a gemstone, make sure to grab it.", 250, 410);
+            ctx.fillText("You must pick up all gemstones", 250, 435);
+            ctx.fillText("in order to advance!", 250, 460);
+            ctx.restore();
+
+            // Draw the instructions to begin playing the game
+            ctx.save();
+            ctx.font = "24px Impact";
+            ctx.textAlign = "center";
+            ctx.fillText("Press Spacebar to Begin", 250, 500);
+            ctx.restore();
+
+            // Draw the instructions on how to pull up the instructions menu when needed
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.font = "12px arial";
+            ctx.fillText("Press Spacebar at anytime to view instructions again.", 250, 515);
+            ctx.restore();
+        }
+
         // LIFE METER
-        // Set the starting position of the meter, right justified
-        var meterX = 450;
+        var meterX = 450;     // Set starting position of the meter
         var meterY = 505;
-        // Set font properties for the text
-        ctx.save();
+        ctx.save();                 // Set font properties for the text
         ctx.font = "24px Courier";
         ctx.fillText("Lives:", 275, 575);
         ctx.restore();
-        // Draw small scale character image to represent remaining lives
+
         // Loops through the amount of lives in the playerLives variable
+        // and draws a small scale character image for each one
         var i = 0;
         while (i < gameMaster.playerLives) {
             ctx.drawImage(Resources.get(player.sprite), meterX - i*45, meterY, 51, 86);
@@ -332,36 +442,33 @@ var gameMaster = {
         }
 
         // CURRENT LEVEL
-        // adds a banner to the bottom left with the current game level
-        var levelBanner = "Level " + gameMaster.gameLevel;
-        // Changes display to keep displaying Level 10 even after game is defeated
-        if (gameMaster.gameLevel === 11) {
-            levelBanner = "Level " + 10;
-        }
+        // Draws current level display to the bottom left of the game map
+        var levelBanner = "Level " + gameMaster.gameLevel; // set banner text
+        if (gameMaster.gameLevel === 11) {    // Sets banner text to Level 10
+            levelBanner = "Level " + 10;      // After game is won. Which sets
+        }                                     // gameLevel to 11
         ctx.save();
         ctx.font = "24px Impact";
         ctx.fillText(levelBanner, 10, 575);
         ctx.restore();
 
         // CAPTURED SQUARES
-        // Render the key image on squares that have been captured
-        var capturedSquare = 'images/Key.png';
+        // Draws the key image on squares that have been captured
+        var capturedSquare = 'images/Key.png';    // set image URL
+        // Find length of Array
         var capturedSquareLength = gameMaster.goalSquares.length;
-        var offset;
+        var offset;                 // Declare offset variable
         gameMaster.goalSquares.forEach(function(val, i) {
-            offset = 101 * i;
-            if (val === true) {
+            offset = 101 * i;           // set offset for each square in array
+            if (val === true) {         // if square is captured, draw key
                 ctx.drawImage(Resources.get(capturedSquare), 10 + offset, 15, 85, 120);
             }
         });
 
         // NEW LEVEL ACHIEVED
-        // Only begin displaying Levels for Level 2 and up
-        if (gameMaster.gameLevel > 1) {
-            // begin counting display duration in titleTimer
-            gameMaster.titleTimer += dt;
-            // Display the title until the timer reachers 2 seconds.
-            if (gameMaster.titleTimer < 2) {
+        if (gameMaster.gameLevel > 1) { // Only display for Level 2 and up
+            gameMaster.titleTimer += dt;    // begin timer
+            if (gameMaster.titleTimer < 2) { // display title for 2 seconds.
                 var title = "Level  " + gameMaster.gameLevel;
                 ctx.save();
                 ctx.strokeStyle = 'white';
@@ -377,7 +484,6 @@ var gameMaster = {
         // GAME OVER
         // Display Game Over when player is out of lives.
         if (gameMaster.playerLives === 0) {
-            // Set the stroke, and text styles for GAME OVER
             ctx.save();
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 5;
@@ -407,63 +513,86 @@ var gameMaster = {
             ctx.restore();
         }
     },
+    /*
+     * Lose Life Function - this handls all code to be executed when a player
+     * loses a life. Subtracts 1 from the total player life count, then resets
+     * the player character to the default starting position.
+     */
     loseLife : function (){
         'use strict';
-        //Decrement player lives by 1 and reset character to Starting point
-        gameMaster.playerLives--;
-        player = Character();
+        gameMaster.playerLives -= 1;  // subtract 1 from player life count
+        player = new Character();     // reset character
     },
+    /*
+     * Road Block function - this creates the effect of stopping the players
+     * movement by reversing the User's last move when character collides
+     * with a rock.
+     */
     roadBlock : function () {
         'use strict';
-        // Block the players movement, by reversing their last input
         if (gameMaster.lastMove === 'up') {
-            player.handleInput('down');
+            player.handleInput('down');     // If  moved up, move back down
         } else if (gameMaster.lastMove === 'down') {
-            player.handleInput('up');
+            player.handleInput('up');       // If  moved down, move back up
         } else if (gameMaster.lastMove === 'right') {
-            player.handleInput('left');
+            player.handleInput('left');     // If  moved right, move back left
         } else if (gameMaster.lastMove === 'left') {
-            player.handleInput('right');
+            player.handleInput('right');    // If  moved left, move back right
         }
     },
+    /*
+     * Collect Gem Function - runs when the character collides with a gem. It
+     * then subtracts 1 from the gemCount. Once it hits 0, player can advance.
+     */
     collectGem : function () {
         'use strict';
-        // Decrement the levels gem count by 1
-        gameMaster.gemCount--;
+        gameMaster.gemCount -= 1; // Decrement the levels gem count by 1
     },
+    /*
+     * Level Victory Fuction - resets goal squares to false "uncollected"
+     * then increments the game to the next level by adding one to the
+     * game level variable. Calls the levels function to set up eneimes
+     * It then resets the title timer to display level title for 2 seconds.
+     */
     levelVictory : function() {
         'use strict';
-        // reset goal squares to false ( not captured )
-        gameMaster.goalSquares = [false, false, false, false, false];
-        // Increment the gameLevel variable, to move up a level
-        gameMaster.gameLevel++;
-        // Reset title timer to display the next level title
-        if (gameMaster.gameLevel <= 10) {
+        gameMaster.goalSquares = [  // clears all captured squares to begin
+            false,                  // new level.
+            false,
+            false,
+            false,
+            false];
+        gameMaster.gameLevel += 1;  // adds one to the game level variable
+        if (gameMaster.gameLevel <= 10) { // reset title timer to display level
             gameMaster.titleTimer = 0;
         }
-        // call the levels function to set up next level
-        gameMaster.levels();
+        gameMaster.levels();    // calls levels function to load next level
     },
+    /*
+     * Level Score function accepts the current character posisition
+     * and then sets the square that the character reached to true (captured).
+     * Updates the goalSquares array with the updated status.
+     *
+     * Then once all squares are true, and all gems collected, it calls
+     * level victory function to advance a level.
+     */
     levelScore : function (charXPosition) {
         'use strict';
-        // Function keeps track of what goal squares have been captured
-        // Once all squares and gems are captured, it calls the Level Victory function
-        // determine which square the character was in and set that square to true
-        if (charXPosition === 1){
+        if (charXPosition === 1){       // square 1 , far left square
             gameMaster.goalSquares[0] = true;
-            player = Character();
-        } else if (charXPosition === 102){
+            player = new Character();
+        } else if (charXPosition === 102){    // square 2 captured
             gameMaster.goalSquares[1] = true;
-            player = Character();
-        } else if (charXPosition === 203){
+            player = new Character();
+        } else if (charXPosition === 203){    // square 3 captured
             gameMaster.goalSquares[2] = true;
-            player = Character();
-        } else if (charXPosition === 304){
+            player = new Character();
+        } else if (charXPosition === 304){    // square 4 captured
             gameMaster.goalSquares[3] = true;
-            player = Character();
-        } else if (charXPosition === 405){
+            player = new Character();
+        } else if (charXPosition === 405){    // square 5 captured
             gameMaster.goalSquares[4] = true;
-            player = Character();
+            player = new Character();
         }
         // check that all squares are set to true, then trigger levelVictory
         if (gameMaster.goalSquares[0] === true
@@ -471,13 +600,31 @@ var gameMaster = {
             && gameMaster.goalSquares[2] === true
             && gameMaster.goalSquares[3] === true
             && gameMaster.goalSquares[4] === true
-            && gameMaster.gemCount === 0)
+            && gameMaster.gemCount === 0)   // check all Gems are collected too
         {
-            gameMaster.levelVictory();
+            gameMaster.levelVictory(); // advance a level
         }
     },
 
-    // GAME LEVELS
+    /*
+     * GAME LEVELS
+     * This function holds all the eneime and obstacle settings for each level.
+     * It uses an if statemtn to check the value of the gameLevel variable,
+     * then loads the appropriate level.
+     *
+     * Each level clears the allEnemies array. Then declares the rocks, gems,
+     * and enemy objects for the level. The object holds the instantiate code
+     * for each enemy and obstacle object. With the correct parameters set.
+     * Column, Row, Direction, and Speed (Seconds Duration) for each bug.
+     * Colum, Row for each rock and each gem.
+     *
+     * Finally, the function pushes all enemies into the allEnemies variable
+     * which is grabbed by the game engine and rendered. It pushes them in order
+     * gems then rocks then bugs, so that the bugs are always on top. Z order
+     * is determined by order rendered.
+     *
+     * Levels 2 - 10 follow the same pattern as Level 1. Only commenting Level 1.
+     */
     levels : function() {
         'use strict';
         // Declare fucntion wide variables
@@ -487,17 +634,11 @@ var gameMaster = {
 
         // LEVEL 1
         if (gameMaster.gameLevel === 1){
-            // set player character to starting position
-            player = Character();
-            // clear the previous level from the allEnemies Array
-            allEnemies.splice(0,allEnemies.length);
-            // add any obstacle rocks
-            rocks = {};
-            // add any Gems
-            gems = {};
-            // Add our enemy bugs. With a column, row, direction and duration in seconds
-            // The larger the seconds value, the slower the bug goes.
-            enemies = {
+            player = new Character();   // Reset character to start point
+            allEnemies.splice(0,allEnemies.length); // clear all eneimes from previous level
+            rocks = {};                   // add any obstacle rocks
+            gems = {};                     // add any Gems
+            enemies = {                   // add enemy bugs
                 bug01: new Enemy(3, 1, 'right', 2),
                 bug02: new Enemy(1, 2, 'right', 3),
                 bug03: new Enemy(2, 3, 'right', 5)
@@ -505,10 +646,9 @@ var gameMaster = {
         }
 
         // LEVEL 2
-        // Only commenting the first level, all the rest are copies
         else if (gameMaster.gameLevel === 2){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks = {};
             gems = {};
             enemies = {
@@ -523,7 +663,7 @@ var gameMaster = {
         // LEVEL 3
         else if (gameMaster.gameLevel === 3){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks = {
                 rock01 : new Stone(3,2)
             };
@@ -539,7 +679,7 @@ var gameMaster = {
         // LEVEL 4
         else if (gameMaster.gameLevel === 4){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks = {
                 rock01 : new Stone(1,3),
                 rock02 : new Stone(5,3)
@@ -558,7 +698,7 @@ var gameMaster = {
         // LEVEL 5
         else if (gameMaster.gameLevel === 5){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks = {};
             gems = {
                 gem01 : new Jewel(3,2)
@@ -576,7 +716,7 @@ var gameMaster = {
         // LEVEL 6
         else if (gameMaster.gameLevel === 6){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks = {
                 rock01 : new Stone(2,2),
                 rock02 : new Stone(4,2)
@@ -597,7 +737,7 @@ var gameMaster = {
         // LEVEL 7
         else if (gameMaster.gameLevel === 7){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks ={
                 rock01 : new Stone(1,3),
                 rock02 : new Stone(2,3),
@@ -617,7 +757,7 @@ var gameMaster = {
         // LEVEL 8
         else if (gameMaster.gameLevel === 8){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks = {
                 rock01 : new Stone(1,3),
                 rock02 : new Stone(3,3),
@@ -640,7 +780,7 @@ var gameMaster = {
         // LEVEL 9
         else if (gameMaster.gameLevel === 9){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks = {
                 rock01 : new Stone(1,3),
                 rock02 : new Stone(2,2),
@@ -663,7 +803,7 @@ var gameMaster = {
         // LEVEL 10
         else if (gameMaster.gameLevel === 10){
             allEnemies.splice(0,allEnemies.length);
-            player = Character();
+            player = new Character();
             rocks = {
                 rock01 : new Stone(2,2),
                 rock02 : new Stone(4,2),
@@ -681,21 +821,18 @@ var gameMaster = {
                 bug04 : new Enemy(1, 2, 'left', 2)
             };
             // END OF GAME
-            // Leaving level 10 running in background of winning text
+            // Leaves level 10 running in background of "You Won" text
         }
 
-        // Push all bugs, gems, and rocks into global allEnemies array
-        // They are done seperately to control which elements appear on top
-        // Bugs added last to appear on top of all other elements
-        var jewels = Object.keys(gems);
+        var jewels = Object.keys(gems);   // Push jewels into allEnemies array
         jewels.forEach(function(val){
             allEnemies.push(gems[val]);
         });
-        var stones = Object.keys(rocks);
+        var stones = Object.keys(rocks);  // Push rocks into allEnemies array
         stones.forEach(function(val){
             allEnemies.push(rocks[val]);
         });
-        var bugs = Object.keys(enemies);
+        var bugs = Object.keys(enemies);  // Push bugs into allEnemies array
         bugs.forEach(function(val){
             allEnemies.push(enemies[val]);
         });
@@ -703,11 +840,7 @@ var gameMaster = {
       }
 };
 
-// Now instantiate your objects.
-// Place all enemy objects in an array called allEnemies
-// Place the player object in a variable called player
-
-// Levels function instanitates all enemies and obstacles
+// Start the game by calling the Levels function, which loads Level 1.
 gameMaster.levels();
 
 // This listens for key presses and sends the keys to your
